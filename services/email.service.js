@@ -13,7 +13,6 @@ function getTransporter() {
   const pass = process.env.SMTP_PASSWORD ? process.env.SMTP_PASSWORD.replace(/\s+/g, "") : "";
 
   if (!user || !pass) {
-    console.warn("⚠️ [EmailService] SMTP credentials missing in environment. Email delivery paused.");
     return null;
   }
 
@@ -22,6 +21,9 @@ function getTransporter() {
     port,
     secure,
     auth: { user, pass },
+    connectionTimeout: 6000,
+    greetingTimeout: 6000,
+    socketTimeout: 6000,
     tls: {
       rejectUnauthorized: false,
     },
@@ -32,6 +34,149 @@ function getTransporter() {
 
 const FROM_EMAIL = process.env.SMTP_FROM_EMAIL || "Lalit Saini <sainilalit2751@gmail.com>";
 const OWNER_EMAIL = process.env.NOTIFICATION_EMAIL || "sainilalit2751@gmail.com";
+
+/**
+ * Universal Resilient Email Dispatcher:
+ * Supports:
+ * 1. Google Apps Script Webhook (Port 443 - Bypasses Render Free Tier SMTP Block)
+ * 2. Resend API (HTTPS Port 443)
+ * 3. Brevo API (HTTPS Port 443)
+ * 4. Web3Forms (HTTPS Port 443)
+ * 5. Direct SMTP (Fallback with 6s timeout protection)
+ */
+async function dispatchEmail({ to, replyTo, subject, html, text, fromName }) {
+  const webhookUrl = process.env.EMAIL_WEBHOOK_URL || process.env.GMAIL_WEBHOOK_URL;
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  const web3formsKey = process.env.WEB3FORMS_ACCESS_KEY;
+
+  // 1. Google Apps Script Webhook / Custom HTTPS Relay (Port 443 - 100% Render compatible)
+  if (webhookUrl) {
+    try {
+      const resp = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to,
+          replyTo: replyTo || to,
+          subject,
+          html,
+          text: text || "",
+          fromName: fromName || "W3 Lalit Portfolio",
+        }),
+      });
+      if (resp.ok) {
+        console.log(`✅ [EmailService:Webhook] Delivered to ${to} via Google Apps Script Webhook`);
+        return { success: true, provider: "webhook" };
+      }
+    } catch (err) {
+      console.warn(`⚠️ [EmailService:Webhook] Dispatch error:`, err.message);
+    }
+  }
+
+  // 2. Resend API (HTTPS Port 443)
+  if (resendApiKey) {
+    try {
+      const fromAddress = process.env.RESEND_FROM || "W3 Lalit <onboarding@resend.dev>";
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: [to],
+          subject,
+          html,
+          reply_to: replyTo || undefined,
+        }),
+      });
+      if (resp.ok) {
+        console.log(`✅ [EmailService:Resend] Delivered to ${to} via Resend API`);
+        return { success: true, provider: "resend" };
+      }
+    } catch (err) {
+      console.warn(`⚠️ [EmailService:Resend] Dispatch error:`, err.message);
+    }
+  }
+
+  // 3. Brevo API (HTTPS Port 443)
+  if (brevoApiKey) {
+    try {
+      const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": brevoApiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: fromName || "Lalit Saini", email: "sainilalit2751@gmail.com" },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+          replyTo: replyTo ? { email: replyTo } : undefined,
+        }),
+      });
+      if (resp.ok) {
+        console.log(`✅ [EmailService:Brevo] Delivered to ${to} via Brevo API`);
+        return { success: true, provider: "brevo" };
+      }
+    } catch (err) {
+      console.warn(`⚠️ [EmailService:Brevo] Dispatch error:`, err.message);
+    }
+  }
+
+  // 4. Web3Forms (HTTPS Port 443)
+  if (web3formsKey) {
+    try {
+      const resp = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_key: web3formsKey,
+          subject,
+          from_name: fromName || "W3 Lalit Portfolio",
+          email: replyTo || to,
+          message: text || "New submission from W3 Lalit Portfolio",
+        }),
+      });
+      if (resp.ok) {
+        console.log(`✅ [EmailService:Web3Forms] Forwarded to ${to} via Web3Forms`);
+        return { success: true, provider: "web3forms" };
+      }
+    } catch (err) {
+      console.warn(`⚠️ [EmailService:Web3Forms] Dispatch error:`, err.message);
+    }
+  }
+
+  // 5. Direct SMTP (Fallback for localhost, VPS, or paid Render tiers)
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.warn("⚠️ [EmailService] No email transport configured (SMTP credentials or HTTPS Webhook missing).");
+    return { success: false, reason: "No email transport configured" };
+  }
+
+  try {
+    const result = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to,
+      replyTo: replyTo || undefined,
+      subject,
+      html,
+    });
+    console.log(`✅ [EmailService:SMTP] Delivered to ${to} via SMTP`);
+    return { success: true, provider: "smtp", info: result };
+  } catch (err) {
+    const isTimeout = err.code === "ETIMEDOUT" || err.message?.includes("timeout");
+    if (isTimeout) {
+      console.warn(`⚠️ [EmailService:SMTP] Connection timed out. Note: Render Free Tier blocks outbound SMTP ports (25, 465, 587). Please set EMAIL_WEBHOOK_URL or RESEND_API_KEY in Render environment variables for instant HTTPS delivery.`);
+    } else {
+      console.warn(`⚠️ [EmailService:SMTP] Delivery failed:`, err.message);
+    }
+    return { success: false, error: err.message };
+  }
+}
 
 function formatWhatsAppLink(phone, clientName, subject) {
   if (!phone) return null;
@@ -278,18 +423,32 @@ export async function sendContactInquiryNotification(contactData) {
 
   try {
     const [ownerRes, clientRes] = await Promise.allSettled([
-      transporter.sendMail(ownerMailOptions),
-      transporter.sendMail(clientMailOptions),
+      dispatchEmail({
+        to: OWNER_EMAIL,
+        replyTo: email,
+        subject: ownerMailOptions.subject,
+        html: ownerMailOptions.html,
+        text: `New Inquiry from ${name} (${email}): ${message}`,
+        fromName: "W3 Lalit Portfolio",
+      }),
+      dispatchEmail({
+        to: email,
+        replyTo: OWNER_EMAIL,
+        subject: clientMailOptions.subject,
+        html: clientMailOptions.html,
+        text: `Thank you for reaching out, ${name}! Lalit Saini will reply within 24 hours.`,
+        fromName: "Lalit Saini",
+      }),
     ]);
 
-    if (ownerRes.status === "rejected") {
-      console.warn("⚠️ [EmailService] Failed to send owner alert:", ownerRes.reason.message);
+    if (ownerRes.status === "rejected" || !ownerRes.value?.success) {
+      console.warn("⚠️ [EmailService] Failed to send owner alert:", ownerRes.reason?.message || ownerRes.value?.error);
     } else {
       console.log("✅ [EmailService] Inquiry notification delivered to", OWNER_EMAIL);
     }
 
-    if (clientRes.status === "rejected") {
-      console.warn("⚠️ [EmailService] Failed to send client confirmation:", clientRes.reason.message);
+    if (clientRes.status === "rejected" || !clientRes.value?.success) {
+      console.warn("⚠️ [EmailService] Failed to send client confirmation:", clientRes.reason?.message || clientRes.value?.error);
     } else {
       console.log("✅ [EmailService] Confirmation receipt delivered to client", email);
     }
@@ -307,9 +466,6 @@ export async function sendContactInquiryNotification(contactData) {
  * 2. Notification to Lalit Saini
  */
 export async function sendNewsletterWelcomeEmail(subscriberEmail) {
-  const transporter = getTransporter();
-  if (!transporter) return { success: false, reason: "SMTP not configured" };
-
   const subscriberOptions = {
     from: FROM_EMAIL,
     to: subscriberEmail,
@@ -351,8 +507,20 @@ export async function sendNewsletterWelcomeEmail(subscriberEmail) {
 
   try {
     await Promise.allSettled([
-      transporter.sendMail(subscriberOptions),
-      transporter.sendMail(ownerOptions),
+      dispatchEmail({
+        to: subscriberEmail,
+        replyTo: OWNER_EMAIL,
+        subject: subscriberOptions.subject,
+        html: subscriberOptions.html,
+        fromName: "Lalit Saini",
+      }),
+      dispatchEmail({
+        to: OWNER_EMAIL,
+        replyTo: subscriberEmail,
+        subject: ownerOptions.subject,
+        html: ownerOptions.html,
+        fromName: "W3 Lalit Subscribers",
+      }),
     ]);
     return { success: true };
   } catch (err) {
@@ -365,9 +533,6 @@ export async function sendNewsletterWelcomeEmail(subscriberEmail) {
  * Send Admin Security Alert (On Login / Auth Event)
  */
 export async function sendAdminSecurityAlert(userEmail, meta = {}) {
-  const transporter = getTransporter();
-  if (!transporter) return { success: false };
-
   const alertOptions = {
     from: FROM_EMAIL,
     to: OWNER_EMAIL,
@@ -388,7 +553,12 @@ export async function sendAdminSecurityAlert(userEmail, meta = {}) {
   };
 
   try {
-    await transporter.sendMail(alertOptions);
+    await dispatchEmail({
+      to: OWNER_EMAIL,
+      subject: alertOptions.subject,
+      html: alertOptions.html,
+      fromName: "W3 Lalit Security",
+    });
     return { success: true };
   } catch (err) {
     console.warn("⚠️ [EmailService] Security alert email failed:", err.message);
