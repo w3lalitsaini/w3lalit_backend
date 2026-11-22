@@ -33,9 +33,24 @@ function getTransporter() {
 const FROM_EMAIL = process.env.SMTP_FROM_EMAIL || "Lalit Saini <sainilalit2751@gmail.com>";
 const OWNER_EMAIL = process.env.NOTIFICATION_EMAIL || "sainilalit2751@gmail.com";
 
+function formatWhatsAppLink(phone, clientName, subject) {
+  if (!phone) return null;
+  const digitsOnly = phone.replace(/[^\d]/g, "");
+  if (!digitsOnly) return null;
+  const fullDigits = digitsOnly.length === 10 ? `91${digitsOnly}` : digitsOnly;
+  const defaultText = `Hi ${clientName}, this is Lalit Saini regarding your project inquiry: "${subject || "Web Development"}".`;
+  return `https://wa.me/${fullDigits}?text=${encodeURIComponent(defaultText)}`;
+}
+
+function formatTelLink(phone) {
+  if (!phone) return null;
+  const cleaned = phone.replace(/[^\d+]/g, "");
+  return cleaned ? `tel:${cleaned}` : null;
+}
+
 /**
  * Send Contact Inquiry Notifications:
- * 1. Notification to Lalit Saini with full inquiry details
+ * 1. Notification to Lalit Saini with full inquiry details + phone action links
  * 2. Automated Confirmation Receipt to Client
  */
 export async function sendContactInquiryNotification(contactData) {
@@ -48,55 +63,127 @@ export async function sendContactInquiryNotification(contactData) {
     timeStyle: "short",
   });
 
-  // 1. Email to Lalit (Owner Alert)
+  const telUrl = formatTelLink(phone);
+  const waUrl = formatWhatsAppLink(phone, name, subject);
+
+  // 1. Email to Lalit (Owner Alert) - Modern, Editorial, Responsive
   const ownerMailOptions = {
     from: FROM_EMAIL,
     to: OWNER_EMAIL,
     replyTo: email,
-    subject: `[New Inquiry] ${subject || "Client Project"} — from ${name}`,
+    subject: `⚡ [Client Lead] ${name}: "${subject || niche || "Project Inquiry"}" ${phone ? `| 📞 ${phone}` : ""}`,
     html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
-        <div style="background: #090d16; padding: 24px; color: #ffffff;">
-          <h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">W3 Lalit Portfolio — New Client Inquiry</h2>
-          <p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">Received on ${formattedDate}</p>
-        </div>
-        <div style="padding: 24px; color: #1e293b;">
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-            <tr>
-              <td style="padding: 8px 0; font-weight: 600; color: #64748b; width: 120px;">Client Name:</td>
-              <td style="padding: 8px 0; font-weight: 700; color: #0f172a;">${name}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Email:</td>
-              <td style="padding: 8px 0;"><a href="mailto:${email}" style="color: #2563eb; text-decoration: none;">${email}</a></td>
-            </tr>
-            ${phone ? `
-            <tr>
-              <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Phone:</td>
-              <td style="padding: 8px 0; color: #0f172a;">${phone}</td>
-            </tr>` : ""}
-            <tr>
-              <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Project Scope:</td>
-              <td style="padding: 8px 0; color: #0f172a;"><span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase;">${niche}</span></td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Subject:</td>
-              <td style="padding: 8px 0; font-weight: 600; color: #0f172a;">${subject}</td>
-            </tr>
-          </table>
-
-          <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
-            <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #334155; white-space: pre-wrap;">${message}</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Project Inquiry</title>
+      </head>
+      <body style="margin: 0; padding: 24px 12px; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+        <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0;">
+          
+          <!-- Top Hero Branding -->
+          <div style="background: linear-gradient(135deg, #090d16 0%, #1e293b 100%); padding: 28px 24px; color: #ffffff; border-bottom: 3px solid #2563eb;">
+            <div style="display: inline-block; background: rgba(37, 99, 235, 0.2); border: 1px solid rgba(37, 99, 235, 0.4); padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #60a5fa; margin-bottom: 12px;">
+              ⚡ NEW CLIENT PROJECT INQUIRY
+            </div>
+            <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff;">
+              W3 Lalit Portfolio Inquiry
+            </h1>
+            <p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8;">
+              Received on ${formattedDate} via <a href="https://w3lalit.vercel.app/contact.html" style="color: #93c5fd; text-decoration: none;">w3lalit.vercel.app</a>
+            </p>
           </div>
 
-          <div style="text-align: center;">
-            <a href="mailto:${email}?subject=Re: ${encodeURIComponent(subject || 'Your project inquiry with W3 Lalit')}" style="display: inline-block; background: #0f172a; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; font-size: 14px;">Reply Directly to ${name}</a>
+          <!-- Main Content -->
+          <div style="padding: 24px;">
+
+            <!-- Client Info Card -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin-bottom: 20px;">
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px;">
+                CLIENT & CONTACT INFORMATION
+              </div>
+
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b; width: 110px;">Name:</td>
+                  <td style="padding: 6px 0; font-size: 15px; font-weight: 700; color: #0f172a;">${name}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Email:</td>
+                  <td style="padding: 6px 0; font-size: 14px;">
+                    <a href="mailto:${email}" style="color: #2563eb; font-weight: 600; text-decoration: none;">${email}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b; vertical-align: top;">Phone:</td>
+                  <td style="padding: 6px 0; font-size: 14px; color: #0f172a;">
+                    ${phone ? `
+                      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <strong style="color: #0f172a; font-size: 15px;">${phone}</strong>
+                      </div>
+                      <div style="margin-top: 6px;">
+                        ${telUrl ? `<a href="${telUrl}" style="display: inline-block; background: #e2e8f0; color: #0f172a; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; text-decoration: none; margin-right: 6px;">📞 Call Now</a>` : ""}
+                        ${waUrl ? `<a href="${waUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; text-decoration: none;">💬 WhatsApp</a>` : ""}
+                      </div>
+                    ` : `<span style="color: #94a3b8; font-style: italic;">Not provided by client</span>`}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Project Scope:</td>
+                  <td style="padding: 6px 0;">
+                    <span style="display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                      ${niche || "General"}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Subject:</td>
+                  <td style="padding: 6px 0; font-size: 14px; font-weight: 600; color: #0f172a;">${subject || "Portfolio Contact"}</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Message Block -->
+            <div style="margin-bottom: 24px;">
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px;">
+                PROJECT REQUIREMENTS & DETAILS
+              </div>
+              <div style="background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid #2563eb; padding: 16px; border-radius: 6px; font-size: 14px; line-height: 1.65; color: #334155; white-space: pre-wrap; word-break: break-word;">${message}</div>
+            </div>
+
+            <!-- Action CTAs -->
+            <div style="background: #f1f5f9; border-radius: 8px; padding: 16px; text-align: center;">
+              <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 10px;">
+                RECOMMENDED ACTIONS:
+              </div>
+              <div style="display: inline-block;">
+                <a href="mailto:${email}?subject=Re: ${encodeURIComponent(subject || 'Your project inquiry with W3 Lalit')}" style="display: inline-block; background: #0f172a; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; margin: 4px;">
+                  ✉️ Reply via Email
+                </a>
+                ${waUrl ? `
+                <a href="${waUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #22c55e; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; margin: 4px;">
+                  💬 Open in WhatsApp
+                </a>
+                ` : ""}
+                <a href="https://w3lalit.vercel.app/admin.html" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; margin: 4px;">
+                  🚀 Open Admin Center
+                </a>
+              </div>
+            </div>
+
           </div>
+
+          <!-- Footer -->
+          <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 24px; text-align: center; font-size: 12px; color: #64748b;">
+            Logged securely into W3 Lalit Portfolio Inquiries System.<br>
+            Portfolio: <a href="https://w3lalit.vercel.app" style="color: #2563eb; text-decoration: none;">w3lalit.vercel.app</a> • Backend: <a href="https://w3lalit-backend.onrender.com" style="color: #2563eb; text-decoration: none;">w3lalit-backend.onrender.com</a>
+          </div>
+
         </div>
-        <div style="background: #f1f5f9; padding: 16px; text-align: center; font-size: 12px; color: #64748b;">
-          Logged into W3 Lalit Portfolio Inquiries System.
-        </div>
-      </div>
+      </body>
+      </html>
     `,
   };
 
@@ -106,38 +193,86 @@ export async function sendContactInquiryNotification(contactData) {
     to: email,
     subject: `Thank you for contacting Lalit Saini — Inquiry Confirmation`,
     html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
-        <div style="background: #090d16; padding: 24px; color: #ffffff;">
-          <h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">W3 Lalit Saini</h2>
-          <p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">Full-Stack Web Developer & Engineer</p>
-        </div>
-        <div style="padding: 24px; color: #1e293b; line-height: 1.6;">
-          <p style="margin: 0 0 16px 0; font-size: 15px;">Hi <strong>${name}</strong>,</p>
-          <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155;">
-            Thank you for reaching out through my developer portfolio! I have received your project details regarding <strong>"${subject || niche}"</strong>.
-          </p>
-          <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155;">
-            I am currently reviewing your requirements and will reply within <strong>24 hours</strong> with technical recommendations, availability, or follow-up questions.
-          </p>
-
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0;">
-            <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase;">Inquiry Summary:</p>
-            <p style="margin: 0; font-size: 13px; color: #475569; white-space: pre-wrap;">${message}</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Inquiry Confirmation</title>
+      </head>
+      <body style="margin: 0; padding: 24px 12px; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0;">
+          
+          <div style="background: linear-gradient(135deg, #090d16 0%, #1e293b 100%); padding: 28px 24px; color: #ffffff; border-bottom: 3px solid #2563eb;">
+            <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff;">
+              W3 Lalit Saini
+            </h1>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">
+              Full-Stack Web Developer & Engineer
+            </p>
           </div>
 
-          <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
-            If you have additional files or urgent specifications, feel free to reply directly to this email.
-          </p>
-          <p style="margin: 20px 0 0 0; font-size: 14px; color: #0f172a; font-weight: 600;">
-            Best regards,<br>
-            <span style="color: #2563eb;">Lalit Saini</span><br>
-            <span style="font-size: 12px; font-weight: 400; color: #64748b;">Full-Stack Developer | w3lalitsaini.com</span>
-          </p>
+          <div style="padding: 24px; color: #1e293b; line-height: 1.6;">
+            <p style="margin: 0 0 16px 0; font-size: 15px;">Hi <strong>${name}</strong>,</p>
+            
+            <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155;">
+              Thank you for reaching out through my developer portfolio! I have received your project details regarding <strong>"${subject || niche || "Web Development Project"}"</strong>.
+            </p>
+            
+            <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155;">
+              I am currently reviewing your requirements and will reply within <strong>24 hours</strong> with technical insights, scope estimates, or follow-up questions.
+            </p>
+
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px;">
+                SUMMARY OF YOUR SUBMISSION:
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; width: 110px;"><strong>Project Scope:</strong></td>
+                  <td style="padding: 4px 0; color: #0f172a;">${niche || "General"}</td>
+                </tr>
+                ${phone ? `
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b;"><strong>Phone:</strong></td>
+                  <td style="padding: 4px 0; color: #0f172a;">${phone}</td>
+                </tr>` : ""}
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b;"><strong>Subject:</strong></td>
+                  <td style="padding: 4px 0; color: #0f172a;">${subject || "General Inquiry"}</td>
+                </tr>
+              </table>
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 13px; color: #475569; white-space: pre-wrap;">
+                ${message}
+              </div>
+            </div>
+
+            <p style="margin: 0 0 16px 0; font-size: 14px; color: #334155;">
+              In the meantime, feel free to explore my latest client projects and case studies:
+            </p>
+
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="https://w3lalit.vercel.app/projects.html" style="display: inline-block; background: #0f172a; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 13px; margin: 4px;">
+                Explore Featured Projects
+              </a>
+              <a href="https://w3lalit.vercel.app/assets/Lalit_Resume.pdf" style="display: inline-block; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 13px; margin: 4px;">
+                Download Resume (PDF)
+              </a>
+            </div>
+
+            <p style="margin: 24px 0 0 0; font-size: 14px; color: #0f172a; font-weight: 600;">
+              Best regards,<br>
+              <span style="color: #2563eb;">Lalit Saini</span><br>
+              <span style="font-size: 12px; font-weight: 400; color: #64748b;">Full-Stack Web Developer | Sikar, Rajasthan, India</span>
+            </p>
+          </div>
+
+          <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px; text-align: center; font-size: 12px; color: #94a3b8;">
+            © 2026 Lalit Saini. All rights reserved. • <a href="https://w3lalit.vercel.app" style="color: #64748b; text-decoration: none;">w3lalit.vercel.app</a>
+          </div>
         </div>
-        <div style="background: #f1f5f9; padding: 14px; text-align: center; font-size: 12px; color: #94a3b8;">
-          © 2026 Lalit Saini. All rights reserved.
-        </div>
-      </div>
+      </body>
+      </html>
     `,
   };
 
