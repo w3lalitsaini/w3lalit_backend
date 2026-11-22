@@ -44,7 +44,7 @@ const OWNER_EMAIL = process.env.NOTIFICATION_EMAIL || "sainilalit2751@gmail.com"
  * 4. Web3Forms (HTTPS Port 443)
  * 5. Direct SMTP (Fallback with 6s timeout protection)
  */
-async function dispatchEmail({ to, replyTo, subject, html, text, fromName }) {
+async function dispatchEmail({ to, replyTo, subject, html, text, fromName, clientData }) {
   const webhookUrl = process.env.EMAIL_WEBHOOK_URL || process.env.GMAIL_WEBHOOK_URL;
   const resendApiKey = process.env.RESEND_API_KEY;
   const brevoApiKey = process.env.BREVO_API_KEY;
@@ -137,8 +137,11 @@ async function dispatchEmail({ to, replyTo, subject, html, text, fromName }) {
           access_key: web3formsKey,
           subject,
           from_name: fromName || "W3 Lalit Portfolio",
+          name: clientData?.name || fromName || "Portfolio Client",
           email: replyTo || to,
-          message: text || "New submission from W3 Lalit Portfolio",
+          phone: clientData?.phone || "Not provided",
+          project_scope: clientData?.niche || "General",
+          message: clientData?.message || text || "New submission from W3 Lalit Portfolio",
         }),
       });
       if (resp.ok) {
@@ -429,7 +432,8 @@ export async function sendContactInquiryNotification(contactData) {
         subject: ownerMailOptions.subject,
         html: ownerMailOptions.html,
         text: `New Inquiry from ${name} (${email}): ${message}`,
-        fromName: "W3 Lalit Portfolio",
+        fromName: name || "W3 Lalit Portfolio",
+        clientData: contactData,
       }),
       dispatchEmail({
         to: email,
@@ -438,6 +442,7 @@ export async function sendContactInquiryNotification(contactData) {
         html: clientMailOptions.html,
         text: `Thank you for reaching out, ${name}! Lalit Saini will reply within 24 hours.`,
         fromName: "Lalit Saini",
+        clientData: contactData,
       }),
     ]);
 
