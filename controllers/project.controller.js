@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Project from "../models/project.model.js";
 import { SEED_PROJECTS } from "../data/seedData.js";
-import { readCollection, writeCollection } from "../utils/storage.js";
+import { readCollection, writeCollection, insertItem, deleteItem, updateItem } from "../utils/storage.js";
 
 // Initialize local projects cache if empty
 if (readCollection("projects").length === 0) {
@@ -101,6 +101,122 @@ export const getProjectBySlug = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+export const createProject = async (req, res) => {
+  try {
+    const {
+      title,
+      subtitle,
+      category,
+      featured,
+      date,
+      image,
+      link,
+      github,
+      tags,
+      summary,
+      overview,
+      features,
+      challenges,
+      solutions,
+    } = req.body;
+
+    if (!title || !category || !summary) {
+      return res.status(400).json({
+        success: false,
+        message: "Project title, category, and summary are required fields.",
+      });
+    }
+
+    const slug = title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    const projectPayload = {
+      id: slug,
+      slug,
+      title: title.trim(),
+      subtitle: subtitle ? subtitle.trim() : "Full-Stack Web Application",
+      category: category.toLowerCase().trim(),
+      featured: featured === true || featured === "true",
+      date: date || new Date().getFullYear().toString(),
+      image: image || "assets/images/projects/Movie.jpg",
+      link: link || "https://github.com/w3lalitsaini",
+      github: github || "https://github.com/w3lalitsaini",
+      tags: Array.isArray(tags)
+        ? tags
+        : typeof tags === "string"
+        ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+        : ["React", "Node.js"],
+      summary: summary.trim(),
+      overview: overview ? overview.trim() : summary.trim(),
+      features: Array.isArray(features)
+        ? features
+        : typeof features === "string"
+        ? features.split("\n").map((f) => f.trim()).filter(Boolean)
+        : ["Modern responsive design", "High-performance architecture"],
+      challenges: Array.isArray(challenges)
+        ? challenges
+        : typeof challenges === "string"
+        ? challenges.split("\n").map((c) => c.trim()).filter(Boolean)
+        : ["Optimizing network overhead and Core Web Vitals."],
+      solutions: Array.isArray(solutions)
+        ? solutions
+        : typeof solutions === "string"
+        ? solutions.split("\n").map((s) => s.trim()).filter(Boolean)
+        : ["Engineered modular client state and efficient caching."],
+    };
+
+    let createdProject = null;
+    if (mongoose.connection.readyState === 1) {
+      const newProj = new Project(projectPayload);
+      await newProj.save();
+      createdProject = newProj;
+    } else {
+      createdProject = insertItem("projects", projectPayload);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Project published successfully!",
+      data: createdProject,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error creating project",
+      error: error.message,
+    });
+  }
+};
+
+export const deleteProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        await Project.findByIdAndDelete(id);
+      } else {
+        await Project.findOneAndDelete({ slug: id });
+      }
+    }
+    deleteItem("projects", id);
+
+    res.status(200).json({
+      success: true,
+      message: "Project removed successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error deleting project",
       error: error.message,
     });
   }

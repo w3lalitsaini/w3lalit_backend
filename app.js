@@ -9,6 +9,7 @@ import AdminRouter from "./routes/admin.routes.js";
 import NewsletterRouter from "./routes/newsletter.routes.js";
 import ProjectRouter from "./routes/project.routes.js";
 import TestimonialRouter from "./routes/testimonial.routes.js";
+import SkillRouter from "./routes/skill.routes.js";
 
 dotenv.config();
 
@@ -72,6 +73,8 @@ app.use("/projects", ProjectRouter);
 app.use("/api/projects", ProjectRouter);
 app.use("/testimonials", TestimonialRouter);
 app.use("/api/testimonials", TestimonialRouter);
+app.use("/skills", SkillRouter);
+app.use("/api/skills", SkillRouter);
 
 // 404 Handler for API
 app.use((req, res) => {
