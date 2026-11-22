@@ -86,12 +86,22 @@ export const login = async (req, res) => {
     // Auto-create default admin account if logging in with official email
     if (!user && cleanEmail === "sainilalit2751@gmail.com") {
       const hashedPassword = await bcrypt.hash(password, 10);
-      user = insertItem("users", {
-        name: "Lalit Saini",
-        email: cleanEmail,
-        password: hashedPassword,
-        role: "admin",
-      });
+      if (mongoose.connection.readyState === 1) {
+        user = new User({
+          name: "Lalit Saini",
+          email: cleanEmail,
+          password: hashedPassword,
+          role: "admin",
+        });
+        await user.save();
+      } else {
+        user = insertItem("users", {
+          name: "Lalit Saini",
+          email: cleanEmail,
+          password: hashedPassword,
+          role: "admin",
+        });
+      }
     }
 
     if (!user) {
