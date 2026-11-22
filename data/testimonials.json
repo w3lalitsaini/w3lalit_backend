@@ -1,0 +1,34 @@
+[
+  {
+    "id": "test-1",
+    "name": "Ramesh Sharma",
+    "role": "Owner, Shayam Cafe • Sikar, Rajasthan",
+    "rating": 5,
+    "avatar": "assets/images/avatars/john.jpg",
+    "quote": "Lalit transformed our physical cafe ordering process into a frictionless digital menu experience. Table turnover improved significantly and customers constantly praise how fast and sleek the application feels on mobile. Delivered exactly on time with zero bugs."
+  },
+  {
+    "id": "test-2",
+    "name": "Virendra Singh",
+    "role": "Founder, Shekhawati Furniture",
+    "rating": 5,
+    "avatar": "assets/images/avatars/sara.jpg",
+    "quote": "Working with Lalit was straightforward from day one. He built our online furniture showroom with custom inquiry workflows that increased our customer leads by over 150%. His technical recommendations on image optimization saved us significant hosting costs."
+  },
+  {
+    "id": "test-3",
+    "name": "Mukesh Saini",
+    "role": "Creative Director, Lali Studio",
+    "rating": 5,
+    "avatar": "assets/images/avatars/umesh.jpg",
+    "quote": "Our photography studio needed a gallery that loaded ultra-high-resolution images instantly without sacrificing visual fidelity. Lalit engineered a custom lightbox and lazy loading architecture that makes our work look stunning on both mobile and large 4K displays."
+  },
+  {
+    "id": "test-4",
+    "name": "Priya Verma",
+    "role": "Product Manager & Tech Lead",
+    "rating": 5,
+    "avatar": "assets/images/avatars/priya.jpg",
+    "quote": "Lalit is an exceptional developer who cares deeply about code quality, API resilience, and performance. His ability to navigate both complex React frontend logic and Node/MongoDB backend pipelines makes him an invaluable asset to any project."
+  }
+]

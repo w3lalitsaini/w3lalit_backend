@@ -1,0 +1,26 @@
+[
+  {
+    "_id": "local_1795325364612_3d36nx",
+    "name": "Aman Patel",
+    "email": "aman@fintech.io",
+    "phone": "",
+    "niche": "saas",
+    "subject": "SaaS MVP Development",
+    "message": "Need an enterprise SaaS MVP built with Next.js and Node.",
+    "status": "unread",
+    "createdAt": "2026-11-22T05:29:24.612Z",
+    "updatedAt": "2026-11-22T05:29:24.612Z"
+  },
+  {
+    "_id": "local_1795325002986_tfokk5",
+    "name": "Test Visitor",
+    "email": "visitor@example.com",
+    "phone": "",
+    "niche": "saas",
+    "subject": "Test Inquiry",
+    "message": "Hello from full-stack portfolio test!",
+    "status": "unread",
+    "createdAt": "2026-11-22T05:23:22.986Z",
+    "updatedAt": "2026-11-22T05:23:22.986Z"
+  }
+]

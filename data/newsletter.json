@@ -1,0 +1,16 @@
+[
+  {
+    "_id": "local_1795325364617_ndodt0",
+    "email": "aman@fintech.io",
+    "status": "active",
+    "createdAt": "2026-11-22T05:29:24.617Z",
+    "updatedAt": "2026-11-22T05:29:24.617Z"
+  },
+  {
+    "_id": "local_1795325003005_fuh1fm",
+    "email": "visitor@example.com",
+    "status": "active",
+    "createdAt": "2026-11-22T05:23:23.005Z",
+    "updatedAt": "2026-11-22T05:23:23.005Z"
+  }
+]

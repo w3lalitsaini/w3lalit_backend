@@ -1,37 +1,63 @@
+import mongoose from "mongoose";
 import Contact from "../models/contact.model.js";
+import { insertItem, readCollection, updateItem, deleteItem } from "../utils/storage.js";
 
 export const contactSubmit = async (req, res) => {
   try {
-    const { name, email, phone, niche, subject, message } = req.body;
+    const { name, email, phone, niche, projectType, subject, message } = req.body;
 
     if (!name || !email || !message) {
-      return res
-        .status(400)
-        .json({ message: "Name, email, and message are required" });
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and message are required fields.",
+      });
     }
 
-    const newContact = new Contact({
-      name,
-      email,
-      phone,
-      niche,
-      subject: subject || niche || "General Inquiry",
-      message,
-    });
-    await newContact.save();
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address.",
+      });
+    }
 
-    console.log("Contact Form Submission Saved:", {
-      name,
-      email,
-      phone,
-      niche,
-      message,
+    const resolvedNiche = niche || projectType || "General Inquiry";
+    const resolvedSubject = subject || resolvedNiche || "Portfolio Contact Inquiry";
+
+    const contactPayload = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone ? phone.trim() : "",
+      niche: resolvedNiche,
+      subject: resolvedSubject,
+      message: message.trim(),
+      status: "unread",
+    };
+
+    if (mongoose.connection.readyState === 1) {
+      const newContact = new Contact(contactPayload);
+      await newContact.save();
+    } else {
+      insertItem("contacts", contactPayload);
+    }
+
+    console.log("Contact submission received:", {
+      name: contactPayload.name,
+      email: contactPayload.email,
+      niche: contactPayload.niche,
     });
 
     res.status(200).json({
-      message: "Message sent successfully! We will get back to you soon.",
+      success: true,
+      message: "Thank you! Your message has been received. I will reply within 24 hours.",
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Contact submission error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error processing message",
+      error: error.message,
+    });
   }
 };

@@ -1,0 +1,11 @@
+[
+  {
+    "_id": "local_1795325009465_773w9d",
+    "name": "Lalit Saini",
+    "email": "sainilalit2751@gmail.com",
+    "password": "$2b$10$jiFojDiDHKIJx2kGuh29DuyiFXvBOGr2uccC2SWpAqHFFd/Ns7PFa",
+    "role": "admin",
+    "createdAt": "2026-11-22T05:23:29.465Z",
+    "updatedAt": "2026-11-22T05:23:29.465Z"
+  }
+]
