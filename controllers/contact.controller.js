@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Contact from "../models/contact.model.js";
 import { insertItem, readCollection, updateItem, deleteItem } from "../utils/storage.js";
+import { sendContactInquiryNotification } from "../services/email.service.js";
 
 export const contactSubmit = async (req, res) => {
   try {
@@ -46,6 +47,11 @@ export const contactSubmit = async (req, res) => {
       name: contactPayload.name,
       email: contactPayload.email,
       niche: contactPayload.niche,
+    });
+
+    // Asynchronously dispatch email notification and confirmation receipt (non-blocking)
+    sendContactInquiryNotification(contactPayload).catch((emailErr) => {
+      console.warn("⚠️ Non-fatal: Email notification error:", emailErr.message);
     });
 
     res.status(200).json({

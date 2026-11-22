@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { insertItem, readCollection } from "../utils/storage.js";
+import { sendAdminSecurityAlert } from "../services/email.service.js";
 
 const getJwtSecret = () => process.env.JWT_SECRET || "w3lalit_secure_dev_jwt_secret_2026";
 
@@ -107,6 +108,14 @@ export const login = async (req, res) => {
       getJwtSecret(),
       { expiresIn: "7d" }
     );
+
+    // Send security login alert to admin (non-blocking)
+    sendAdminSecurityAlert(user.email, {
+      ip: req.ip || req.headers["x-forwarded-for"] || "127.0.0.1",
+      userAgent: req.headers["user-agent"],
+    }).catch((err) => {
+      console.warn("⚠️ Non-fatal: Security alert email error:", err.message);
+    });
 
     res.status(200).json({
       success: true,

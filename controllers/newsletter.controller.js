@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Newsletter from "../models/newsletter.model.js";
 import { insertItem, readCollection } from "../utils/storage.js";
+import { sendNewsletterWelcomeEmail } from "../services/email.service.js";
 
 export const subscribe = async (req, res) => {
   try {
@@ -21,6 +22,8 @@ export const subscribe = async (req, res) => {
       });
     }
 
+    let isNewSubscription = false;
+
     if (mongoose.connection.readyState === 1) {
       const existingSubscriber = await Newsletter.findOne({ email: cleanEmail });
       if (existingSubscriber) {
@@ -32,6 +35,7 @@ export const subscribe = async (req, res) => {
 
       const newSubscriber = new Newsletter({ email: cleanEmail });
       await newSubscriber.save();
+      isNewSubscription = true;
     } else {
       const localSubscribers = readCollection("newsletter");
       const exists = localSubscribers.some((s) => s.email === cleanEmail);
@@ -42,6 +46,14 @@ export const subscribe = async (req, res) => {
         });
       }
       insertItem("newsletter", { email: cleanEmail, status: "active" });
+      isNewSubscription = true;
+    }
+
+    if (isNewSubscription) {
+      // Asynchronously trigger welcome and notification email
+      sendNewsletterWelcomeEmail(cleanEmail).catch((err) => {
+        console.warn("⚠️ Non-fatal: Newsletter welcome email error:", err.message);
+      });
     }
 
     res.status(201).json({
